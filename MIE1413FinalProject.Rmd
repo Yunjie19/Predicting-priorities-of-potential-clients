@@ -1,0 +1,528 @@
+---
+title: "MIE1413FinalProject"
+author: "Yunjie Xu, ZheYuan Fan"
+date: "08/04/2022"
+output: pdf_document
+---
+
+```{loading packages}
+
+library(ggplot2)
+library(tibble)
+library(caTools)
+library(caret) # needs cutpointr packages for loading caret
+library(InformationValue) # used for confusion matrix
+library(cutpointr)
+library(pROC)
+library(broom) # model checking
+library(tidyverse)
+library(leaps)
+library(MASS)
+library(dplyr)
+library(lmtest)
+
+```
+
+```{r}
+library(ggplot2)
+```
+
+
+```{r loading data}
+
+# loading data
+df <- read.csv('/Users/xuyunjie/Desktop/Final_Project Supporting Documents/December 13 data.csv')
+df$value_flag <- ifelse(df$value_flag == "High",1,0)
+
+# removing aplicants under age 25: MEB has indicated that this analysis will only be applied to individuals age 25 and older.
+df <- df[df$age >= 25,]
+df
+
+```
+## Data Explorations
+We explored our data by visualizing the distribution of 0 and 1s for the dependent variable (valuable or not) in each independent variable, as well as the distribution of each variable itself.
+```{r age}
+
+p_1 <- ggplot(df,aes(x = age,group = value_flag,fill = as.factor(value_flag),y = ..density..))
+p_1 <- p_1 + geom_histogram(position = "dodge", binwidth = 1)
+print(p_1)
+
+p_2 <- ggplot(df, aes(x = age)) 
+p_2 <- p_2 + geom_histogram(breaks = seq(24.5,99.5, by = 1)) 
+  labs(x = "Age") 
+print(p_2)
+
+with(df, do.call(rbind,tapply(age,value_flag, function(x) c(M = mean(x), SD = sd(x)))))
+
+mu_age <- mean(df$age)
+mu_age
+
+sd_age <- sd(df$age)
+sd_age 
+
+# overall
+summary(df$age)
+# High-value
+summary(df[df$value_flag ==1,]$age)
+# Low-value
+summary(df[df$value_flag ==0,]$age)
+```
+
+```{r education_num}
+
+p_3 <- ggplot(df,aes(x = education_num,group = value_flag,fill = as.factor(value_flag),y = ..density..))
+p_3 <- p_3 + geom_histogram(position = "dodge", binwidth = 1)
+print(p_3)
+
+p_4 <- ggplot(df, aes(x = education_num)) 
+p_4 <- p_4 + geom_histogram(breaks = seq(0,17, by = 1)) 
+  labs(x = "education_num") 
+print(p_4)
+
+with(df, do.call(rbind,tapply(education_num,value_flag, function(x) c(M = mean(x), SD = sd(x)))))
+
+mu_education_num <- mean(df$education_num)
+mu_education_num
+
+sd_education_num <- sd(df$education_num)
+sd_education_num 
+
+# overall
+summary(df$education_num)
+# High-value
+summary(df[df$value_flag ==1,]$education_num)
+# Low-value
+summary(df[df$value_flag ==0,]$education_num)
+
+```
+
+```{r hours_per_week}
+
+p_5 <- ggplot(df,aes(x = hours_per_week,group = value_flag,fill = as.factor(value_flag),y = ..density..))
+p_5 <- p_5 + geom_histogram(position = "dodge", binwidth = 3)
+print(p_5)
+
+p_6 <- ggplot(df, aes(x = hours_per_week)) 
+p_6 <- p_6 + geom_histogram(breaks = seq(0,100, by = 1)) 
+  labs(x = "hours_per_week") 
+print(p_6)
+
+with(df, do.call(rbind,tapply(hours_per_week,value_flag, function(x) c(M = mean(x), SD = sd(x)))))
+
+mu_hours_per_week <- mean(df$hours_per_week)
+mu_hours_per_week
+
+sd_hours_per_week <- sd(df$hours_per_week)
+sd_hours_per_week 
+
+# overall
+summary(df$hours_per_week)
+# High-value
+summary(df[df$value_flag ==1,]$hours_per_week)
+# Low-value
+summary(df[df$value_flag ==0,]$hours_per_week)
+
+```
+
+```{r cap_gain}
+
+p_7 <- ggplot(df,aes(x = cap_gain,group = value_flag,fill = as.factor(value_flag),y = ..density..))
+p_7 <- p_7 + geom_histogram(position = "dodge", binwidth = 10000)
+print(p_7)
+
+p_8 <- ggplot(df, aes(x = cap_gain)) 
+p_8 <- p_8 + geom_histogram(breaks = seq(0,100000, by = 10000)) 
+  labs(x = "cap_gain") 
+print(p_8)
+
+with(df, do.call(rbind,tapply(cap_gain,value_flag, function(x) c(M = mean(x), SD = sd(x)))))
+
+mu_hours_per_week <- mean(df$cap_gain)
+mu_hours_per_week
+
+sd_hours_per_week <- sd(df$cap_gain)
+sd_hours_per_week 
+
+# overall
+summary(df$cap_gain)
+# High-value
+summary(df[df$value_flag ==1,]$cap_gain)
+# Low-value
+summary(df[df$value_flag ==0,]$cap_gain)
+
+```
+
+```{r score}
+
+p_9 <- ggplot(df,aes(x = score,group = value_flag,fill = as.factor(value_flag),y = ..density..))
+p_9 <- p_9 + geom_histogram(position = "dodge", binwidth = 1)
+print(p_9)
+
+p_10 <- ggplot(df, aes(x = score)) 
+p_10 <- p_10 + geom_histogram(breaks = seq(40,80, by = 1)) 
+  labs(x = "score") 
+print(p_10)
+
+with(df, do.call(rbind,tapply(score,value_flag, function(x) c(M = mean(x), SD = sd(x)))))
+
+mu_hours_per_week <- mean(df$score)
+mu_hours_per_week
+
+sd_hours_per_week <- sd(df$score)
+sd_hours_per_week 
+
+# overall
+summary(df$score)
+# High-value
+summary(df[df$value_flag ==1,]$score)
+# Low-value
+summary(df[df$value_flag ==0,]$score)
+```
+
+```{r marital_status}
+
+# marital_status: count
+p_11 <- ggplot(df, aes(x= marital_status, fill= factor(value_flag ))) 
+p_11 <- p_11 +  geom_bar(position="stack") +labs(title='position="stack"') + scale_x_discrete(guide = guide_axis(n.dodge=2))
+print(p_11)
+
+# marital_status: proportion
+p_12 <- ggplot(df, aes(x= marital_status, fill=factor(value_flag ))) 
+p_12 <- p_12 + geom_bar(position="fill") + labs(title='position="fill',y="proportion") + 
+       theme(plot.title = element_text(hjust = 0.5),) + scale_x_discrete(guide = guide_axis(n.dodge=2))
+print(p_12)
+
+with(df,table(marital_status,value_flag))
+```
+
+```{r occupation}
+
+# occupation: count
+p_13 <- ggplot(df, aes(x= occupation, fill= factor(value_flag ))) 
+p_13 <- p_13 +  geom_bar(position="stack") +labs(title='position="stack"') 
+print(p_13)
+
+# occupation: proportion
+p_14 <- ggplot(df, aes(x= occupation, fill=factor(value_flag ))) 
+p_14 <- p_14 + geom_bar(position="fill") + labs(title='position="fill',y="proportion") + 
+       theme(plot.title = element_text(hjust = 0.5),) 
+print(p_14)
+
+with(df,table(occupation,value_flag))
+
+```
+1. drop cap_gain column
+2. remove all observations who's occupation is not available.
+3. add marital group column, make Married-AF-spouse and  Married-civ-spouse to form Marital Group A, and let others form Marital Group B
+4. eduaction years ranges based on quaters
+
+```{r}
+library('tibble')
+library('caTools')
+library('InformationValue')
+library('pROC')
+```
+
+```{r preparing data}
+
+# 1
+df2 <- df[,-5]
+# 2
+df2 <- df2[-which(df2$occupation == 'Group NA'),]
+# 3
+df2 <- add_column(df2, Marital_Group = 0, .after = 3)
+df2[df2$marital_status == "Married-AF-spouse",]$Marital_Group = 1
+df2[df2$marital_status == "Married-civ-spouse",]$Marital_Group = 1 
+#将婚姻状况中有高价值比例高的两组合并为新的一组，其余的合并为另一组，减少treatment levels
+#4
+df2 <- add_column(df2, education_num_Group = 0, .after = 2)
+df2[9 < df2$education_num & df2$education_num <= 10 ,]$education_num_Group = 1
+df2[10 < df2$education_num & df2$education_num <= 12, ]$education_num_Group = 2
+df2[12 < df2$education_num, ]$education_num_Group = 3
+df2
+```
+
+```{r data spliting}
+
+df2$Marital_Group <- as.factor(df2$Marital_Group)
+df2$occupation <- as.factor(df2$occupation)
+df2$education_num_Group <- as.factor(df2$education_num_Group)
+
+set.seed(20220331)
+index <- sample.split( df2, SplitRatio = 0.8)
+# Training dataset
+data_train <- subset(df2,index==TRUE)
+# Testing dataset
+data_test <- subset(df2,index==FALSE)
+data_test
+
+```
+## first try
+We first tried the full model with no interactions (model1). 
+All variables are significant
+estimates are not “aggressive”.
+AIC at 25474.
+Ratio of deviance and Pearson chi-square statistic around 1, indicating Binomial is a good fit.
+```{r GLM_1}
+
+# fit model
+fit1 <- glm(value_flag ~ age + education_num_Group + Marital_Group + occupation + hours_per_week + score, 
+           data = data_train,
+           family = "binomial")
+
+summary(fit1)
+
+# make predictions
+probabilities <- fit1 %>% predict( data_test, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy 0.5
+accuracy_0.5 <- mean(predicted.classes == data_test$value_flag)
+accuracy_0.5
+
+
+#use model to predict probability of default
+predicted <- predict(fit1, data_test, type="response")
+
+#find optimal cutoff probability to use to maximize accuracy
+optimal <- optimalCutoff(data_test$value_flag, predicted)[1]
+
+#create confusion matrix
+confusionMatrix(data_test$value_flag, predicted)
+
+#define object to plot and calculate AUC
+rocobj <- roc(data_test$value_flag, predicted)
+auc <- round(auc(data_test$value_flag, predicted),4)
+
+#create ROC plot
+ggroc(rocobj,colour = 'steelblue', size = 2) +   
+  ggtitle(paste0('ROC Curve ', '(AUC = ', auc, ')')) +
+  theme_minimal()
+```
+
+## Second try
+We then tried the full model, with all interactions (model2). 
+Very few variables appear to be significant, the estimate does not seem to be accurate.
+AIC at 25475, about the same as model1.
+Ratio of deviance and Pearson chi-square statistic around 1.
+```{r GLM_2}
+
+# fit model
+fit2 <- glm(value_flag ~ age * education_num_Group * Marital_Group * occupation * hours_per_week * score, 
+           data = data_train,
+           family = "binomial")
+summary(fit2)
+
+# make predictions
+probabilities <- fit2 %>% predict( data_test, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy 0.5
+accuracy_0.5 <- mean(predicted.classes == data_test$value_flag)
+accuracy_0.5
+
+
+#use model to predict probability of default
+predicted <- predict(fit2, data_test, type="response")
+
+#find optimal cutoff probability to use to maximize accuracy
+optimal <- optimalCutoff(data_test$value_flag, predicted)[1]
+
+#create confusion matrix
+confusionMatrix(data_test$value_flag, predicted)
+
+#define object to plot and calculate AUC
+rocobj <- roc(data_test$value_flag, predicted)
+auc <- round(auc(data_test$value_flag, predicted),4)
+
+#create ROC plot
+ggroc(rocobj,colour = 'steelblue', size = 2) +   
+  ggtitle(paste0('ROC Curve ', '(AUC = ', auc, ')')) +
+  theme_minimal()
+
+# count the number of parameters
+dim(model.matrix(fit2))[2]
+```
+
+Next, we used the stepwise selection (minimizing AIC) to select the best model. The selected model (shown on the right) has the lowest AIC.
+```{r Stepwise model}
+
+# Stepwise regression model
+step.model <- fit2 %>% stepAIC(trace = FALSE)
+                     
+summary(step.model)
+```
+```{r Stepwise model}
+
+# copy the step.model above
+fit3 <- glm(value_flag ~ age + education_num_Group +  Marital_Group + occupation + hours_per_week + score +  age*Marital_Group +  education_num_Group*Marital_Group + age*occupation +   Marital_Group*occupation +
+age*hours_per_week + education_num_Group*hours_per_week +  Marital_Group*hours_per_week  + occupation*hours_per_week +
+age*score +  Marital_Group*score +  occupation*score + hours_per_week*score + age*Marital_Group*hours_per_week +
+education_num_Group*Marital_Group*hours_per_week + age*occupation*hours_per_week +  age*Marital_Group*score +
+Marital_Group*occupation*score + age*hours_per_week*score + Marital_Group*hours_per_week*score  +
+age*Marital_Group*hours_per_week*score ,data = data_train,family = "binomial")
+
+summary(fit3)
+```
+
+```{r Stepwise model}
+
+# make predictions
+probabilities <- fit3 %>% predict( data_test, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy 0.5
+accuracy_0.5 <- mean(predicted.classes == data_test$value_flag)
+accuracy_0.5
+
+
+#use model to predict probability of default
+predicted <- predict(fit3, data_test, type="response")
+
+#find optimal cutoff probability to use to maximize accuracy
+optimal <- optimalCutoff(data_test$value_flag, predicted)[1]
+
+#create confusion matrix
+confusionMatrix(data_test$value_flag, predicted)
+
+#define object to plot and calculate AUC
+rocobj <- roc(data_test$value_flag, predicted)
+auc <- round(auc(data_test$value_flag, predicted),4)
+
+#create ROC plot
+ggroc(rocobj,colour = 'steelblue', size = 2) +   
+  ggtitle(paste0('ROC Curve ', '(AUC = ', auc, ')')) +
+  theme_minimal()
+```
+
+```{r LRT Test }
+
+library(lmtest)
+
+null_model  <- glm(value_flag ~ 1, family = binomial(link = 'logit'), data= data_train)
+null_model
+
+# Likelihood Ratio test
+lrtest(null_model, fit1)
+```
+
+1. independence of errors, 
+2. linearity in the logit for continuous variables, 
+3. absence of multicollinearity, 
+4. and lack of strongly influential outliers.
+```{r Multicollinearity}
+# Multicollinearity
+car::vif(fit1)
+```
+
+```{r}
+
+
+# Predict the probability (p) of diabete positivity
+probabilities <- predict(fit1, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+
+# Select only numeric predictors
+mydata <- data_train %>%
+  dplyr::select(age,score,hours_per_week)
+predictors <- colnames(mydata)
+# Bind the logit and tidying the data for plot
+mydata <- mydata %>%
+  mutate(logit = log(probabilities/(1-probabilities))) %>%
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+ggplot(mydata, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.25) +
+  geom_smooth(method = "loess") + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+```
+
+
+```{r}
+
+library(tidyverse)
+library(broom)
+
+plot(fit1, which = 4, id.n = 5)
+
+# Extract model results
+fit1.data <- augment(fit1) %>% 
+mutate(index = 1:n()) 
+
+ggplot(fit1.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = value_flag), alpha = .25) +
+  theme_bw()
+
+fit1.data %>% 
+  filter(abs(.std.resid) > 3) 
+```
+
+## Results Interpretation 
+```{r}
+pairs(~age + education_num_Group + Marital_Group + occupation + hours_per_week + score,
+      panel = panel.smooth,
+      upper.panel = NULL,
+      data=data_train)
+```
+
+```{r}
+
+data_train$education_num_Group <- as.factor(data_train$education_num_Group)
+data_train
+```
+
+```{r}
+
+ggpairs(data_train, columns = c(1,7,8), aes(color = as.factor(value_flag), alpha = 0.25)) 
+         
+```
+
+```{r}
+
+library(rpart)
+library(rpart.plot)
+
+df <- read.csv('/Users/xuyunjie/Desktop/MIE1413FinalProject/Exam PA 2019 Dec 13/December 13 data.csv')
+df$value_flag <- ifelse(df$value_flag == "High",1,0)
+
+# removing aplicants under age 25: MEB has indicated that this analysis will only be applied to individuals age 25 and older.
+df <- df[df$age >= 25,]
+
+df <- df[-which(df$occupation == 'Group NA'),]
+
+set.seed(20220331)
+index <- sample.split( df, SplitRatio = 0.8)
+# Training dataset
+data_train <- subset(df,index==TRUE)
+# Testing dataset
+data_test <- subset(df,index==FALSE)
+data_test
+
+```
+
+```{r decision tree}
+
+tree1 <- rpart(as.factor(value_flag) ~ .,
+  data = data_train,
+  method = "class",
+  control = rpart.control(minbucket = 5, cp = 0.001, maxdepth = 5),
+  parms = list(split = "gini")
+)
+
+tree1
+rpart.plot(tree1,type = 1)
+
+tree1$results
+tree1$finalModel
+
+```
+```{r}
+
+# make predictions
+probabilities <- tree1 %>% predict(data= data_test, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Model accuracy 0.5
+accuracy_0.5 <- mean(predicted.classes == data_test$value_flag)
+accuracy_0.5
+
+```
+
+
