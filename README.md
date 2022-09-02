@@ -1,0 +1,2 @@
+# Predicting-priorities-of-potential-clients
+The nature of the insurance pricing is that people with different background have different insurance prices. Thus, it might take a certain amount of time for the insurance company to determine the profit generated from each customer. Hence, determining the factors affecting the profitability of customers is crucial for insurance companies. That motivates us to do this project of predicting priorities of potential clients.
